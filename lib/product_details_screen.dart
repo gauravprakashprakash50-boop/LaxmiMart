@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import 'cart_service.dart';
 import 'models.dart';
 import 'widgets/cached_image_widget.dart';
-import 'widgets/skeleton_loader.dart';
-import 'services/error_handler.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
   final Product product;

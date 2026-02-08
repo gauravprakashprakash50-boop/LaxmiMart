@@ -20,7 +20,7 @@ void main() async {
   // Set up error handling
   FlutterError.onError = (FlutterErrorDetails details) {
     debugPrint('Flutter Error: ${details.exception}');
-    final error = ErrorHandler.handleError(details.exception);
+    ErrorHandler.handleError(details.exception);
     // You can send this to your error tracking service here
   };
 
@@ -66,7 +66,9 @@ class LaxmiMartApp extends StatelessWidget {
       home: const HomeScreen(),
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.0),
+          ),
           child: child!,
         );
       },

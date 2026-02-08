@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'cart_service.dart';
 import 'checkout_screen.dart';
+import 'routes/page_transitions.dart';
 import 'widgets/cached_image_widget.dart';
-import 'widgets/skeleton_loader.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -25,13 +25,13 @@ class CartScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.shopping_cart_outlined,
                     size: 64,
                     color: Colors.grey,
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     "Your cart is empty",
                     style: TextStyle(
                       fontSize: 18,
@@ -119,8 +119,9 @@ class CartScreen extends StatelessWidget {
                       : () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                                builder: (context) => const CheckoutScreen()),
+                            SlidePageRoute(
+                                page: const CheckoutScreen(),
+                                direction: PageTransitionDirection.right),
                           );
                         },
                   style: ElevatedButton.styleFrom(

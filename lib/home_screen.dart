@@ -5,6 +5,7 @@ import 'cart_service.dart';
 import 'cart_screen.dart';
 import 'product_details_screen.dart'; // NEW IMPORT
 import 'models.dart';
+import 'routes/page_transitions.dart';
 import 'widgets/skeleton_loader.dart';
 import 'services/error_handler.dart';
 import 'providers/connectivity_provider.dart';
@@ -31,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'Drinks', 'icon': Icons.local_bar, 'color': Colors.purple},
   ];
 
-  late Future<List<Product>> _productsFuture;
   bool _isLoading = true;
   String? _errorMessage;
   List<Product> _products = [];
@@ -283,13 +283,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.inbox_outlined,
                             size: 64,
                             color: Colors.grey,
                           ),
-                          SizedBox(height: 16),
-                          Text(
+                          const SizedBox(height: 16),
+                          const Text(
                             "No products found",
                             style: TextStyle(
                               fontSize: 18,
@@ -297,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text(
                             "Try changing the category or check back later",
                             style: TextStyle(
@@ -340,8 +340,12 @@ class _HomeScreenState extends State<HomeScreen> {
               right: 20,
               bottom: 30,
               child: GestureDetector(
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (c) => const CartScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    SlidePageRoute(
+                      page: const CartScreen(),
+                      direction: PageTransitionDirection.right,
+                    )),
                 child: Container(
                   height: 60,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -418,8 +422,9 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (context) => ProductDetailsScreen(product: product)));
+            SlidePageRoute(
+                page: ProductDetailsScreen(product: product),
+                direction: PageTransitionDirection.right));
       },
       child: Container(
         decoration: BoxDecoration(

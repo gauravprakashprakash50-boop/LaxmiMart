@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'models.dart';
 
 class CartService extends ChangeNotifier {
@@ -129,9 +129,11 @@ class CartService extends ChangeNotifier {
 
   // Debug method to check performance
   void debugPrintPerformanceInfo() {
-    print('Cart Items: ${_items.length}');
-    print('Item Count: $itemCount');
-    print('Total Amount: $totalAmount');
-    print('Is Dirty: $_isDirty');
+    if (kDebugMode) {
+      debugPrint('Cart Items: ${_items.length}');
+      debugPrint('Item Count: $itemCount');
+      debugPrint('Total Amount: $totalAmount');
+      debugPrint('Is Dirty: $_isDirty');
+    }
   }
 }

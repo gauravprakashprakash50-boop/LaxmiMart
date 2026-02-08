@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -17,16 +18,22 @@ class AppCacheManager {
     try {
       await instance.emptyCache();
     } catch (e) {
-      print('Error clearing cache: $e');
+      if (kDebugMode) {
+        debugPrint('Error clearing cache: $e');
+      }
     }
   }
 
   static Future<void> initCache() async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      print('Cache directory: ${appDir.path}');
+      if (kDebugMode) {
+        debugPrint('Cache directory: ${appDir.path}');
+      }
     } catch (e) {
-      print('Error initializing cache: $e');
+      if (kDebugMode) {
+        debugPrint('Error initializing cache: $e');
+      }
     }
   }
 }
