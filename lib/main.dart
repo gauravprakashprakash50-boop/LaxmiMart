@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'routes/page_transitions.dart';
 import 'widgets/enhanced_product_card.dart';
 import 'screens/product_search_screen.dart';
-import 'screens/order_history_screen.dart';
 import 'widgets/skeleton_loader.dart';
 
 // --- 1. CONFIGURATION ---
@@ -191,23 +190,8 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          Consumer<CartProvider>(
-            builder: (_, cart, ch) => IconButton(
-              icon: Badge(
-                label: Text(cart.items.length.toString()),
-                child: const Icon(Icons.shopping_cart),
-              ),
-              onPressed: () => Navigator.of(context).push(
-                SlidePageRoute(
-                  page: const CartScreen(),
-                  direction: PageTransitionDirection.right,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
-      drawer: _buildDrawer(context),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _supabase
             .from('products')
@@ -261,82 +245,41 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-    );
-  }
+      floatingActionButton: Consumer<CartProvider>(
+        builder: (context, cart, child) {
+          // Hide if cart is empty
+          if (cart.items.isEmpty) return const SizedBox.shrink();
 
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(
-              color: Color(0xFFD32F2F),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(Icons.store, size: 48, color: Colors.white),
-                SizedBox(height: 8),
-                Text(
-                  'LaxmiMart',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  SlidePageRoute(
+                    page: const CartScreen(),
+                    direction: PageTransitionDirection.right,
                   ),
+                );
+              },
+              backgroundColor: const Color(0xFFD32F2F),
+              icon: Badge(
+                label: Text(cart.items.length.toString()),
+                child: const Icon(Icons.shopping_cart, color: Colors.white),
+              ),
+              label: Text(
+                '₹${cart.totalAmount.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
+              ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.receipt_long),
-            title: const Text('Order History'),
-            onTap: () {
-              Navigator.pop(context); // Close drawer
-
-// Note: Customer phone will be implemented with authentication in Phase 2
-// For now, hardcoded placeholder is acceptable for testing
-
-              Navigator.push(
-                context,
-                SlidePageRoute(
-                  page: const OrderHistoryScreen(
-                    customerPhone: '1234567890', // Replace with actual phone
-                  ),
-                  direction: PageTransitionDirection.right,
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.pop(context);
-// Note: Settings screen will be implemented in Phase 2
-// Placeholder navigation - currently shows placeholder message
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('About'),
-            onTap: () {
-              Navigator.pop(context);
-              showAboutDialog(
-                context: context,
-                applicationName: 'LaxmiMart',
-                applicationVersion: '1.0.0',
-                children: const [
-                  Text('Your neighborhood grocery store'),
-                ],
-              );
-            },
-          ),
-        ],
+          );
+        },
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
