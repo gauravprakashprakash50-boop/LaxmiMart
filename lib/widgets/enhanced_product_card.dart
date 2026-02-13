@@ -62,7 +62,7 @@ class EnhancedProductCard extends StatelessWidget {
                 ),
                 // Product Info
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -71,7 +71,7 @@ class EnhancedProductCard extends StatelessWidget {
                         product.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 12, // Reduced from 13
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -84,12 +84,14 @@ class EnhancedProductCard extends StatelessWidget {
                           child: Text(
                             product.weightPackSize!,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10, // Reduced from 11
                               color: Colors.grey[600],
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2), // Reduced from 4
                       // Price Row
                       Row(
                         children: [
@@ -98,27 +100,32 @@ class EnhancedProductCard extends StatelessWidget {
                             style: const TextStyle(
                               color: Color(0xFFD32F2F),
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: 14, // Reduced from 15
                             ),
                           ),
                           if (hasDiscount) ...[
-                            const SizedBox(width: 6),
-                            Text(
-                              '₹${product.mrp!.toStringAsFixed(product.mrp!.truncateToDouble() == product.mrp! ? 0 : 2)}',
-                              style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 12,
-                                decoration: TextDecoration.lineThrough,
-                                decorationColor: Colors.grey[500],
+                            const SizedBox(width: 4), // Reduced from 6
+                            Expanded(
+                              child: Text(
+                                '₹${product.mrp!.toStringAsFixed(product.mrp!.truncateToDouble() == product.mrp! ? 0 : 2)}',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 11, // Reduced from 12
+                                  decoration: TextDecoration.lineThrough,
+                                  decorationColor: Colors.grey[500],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4), // Reduced from 6
                       // Smart Add Button
                       SizedBox(
                         width: double.infinity,
+                        height: 32, // Fixed height for consistency
                         child: Consumer<CartProvider>(
                           builder: (context, cart, _) {
                             if (outOfStock) {
@@ -132,7 +139,7 @@ class EnhancedProductCard extends StatelessWidget {
                                   context, cart, quantity);
                             } else {
                               return SizedBox(
-                                height: 36,
+                                height: 32, // Reduced from 36
                                 child: ElevatedButton(
                                   onPressed: () {
                                     cart.addToCart(product);
@@ -152,12 +159,13 @@ class EnhancedProductCard extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     padding: EdgeInsets.zero,
+                                    elevation: 0,
                                   ),
                                   child: const Text(
                                     'ADD',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                      fontSize: 12, // Reduced from 14
                                     ),
                                   ),
                                 ),
@@ -200,7 +208,7 @@ class EnhancedProductCard extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 14, // Reduced from 16
                         letterSpacing: 1,
                       ),
                     ),
@@ -216,7 +224,7 @@ class EnhancedProductCard extends StatelessWidget {
   Widget _buildQuantityCounter(
       BuildContext context, CartProvider cart, int quantity) {
     return Container(
-      height: 36,
+      height: 32, // Reduced from 36
       decoration: BoxDecoration(
         color: const Color(0xFFD32F2F),
         borderRadius: BorderRadius.circular(8),
@@ -226,13 +234,13 @@ class EnhancedProductCard extends StatelessWidget {
         children: [
           // Minus button
           SizedBox(
-            width: 36,
-            height: 36,
+            width: 32, // Reduced from 36
+            height: 32, // Reduced from 36
             child: IconButton(
               onPressed: () {
                 cart.updateQuantity(product.id, quantity - 1);
               },
-              icon: const Icon(Icons.remove, color: Colors.white, size: 18),
+              icon: const Icon(Icons.remove, color: Colors.white, size: 16), // Reduced from 18
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -243,20 +251,20 @@ class EnhancedProductCard extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 14, // Reduced from 16
             ),
           ),
           // Plus button
           SizedBox(
-            width: 36,
-            height: 36,
+            width: 32, // Reduced from 36
+            height: 32, // Reduced from 36
             child: IconButton(
               onPressed: () {
                 if (quantity < product.stock) {
                   cart.updateQuantity(product.id, quantity + 1);
                 }
               },
-              icon: const Icon(Icons.add, color: Colors.white, size: 18),
+              icon: const Icon(Icons.add, color: Colors.white, size: 16), // Reduced from 18
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -277,7 +285,7 @@ class EnhancedProductCard extends StatelessWidget {
         '$discountPercent% OFF',
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 10,
+          fontSize: 9, // Reduced from 10
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -295,7 +303,7 @@ class EnhancedProductCard extends StatelessWidget {
         'Only $stock left',
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 10,
+          fontSize: 9, // Reduced from 10
           fontWeight: FontWeight.bold,
         ),
       ),

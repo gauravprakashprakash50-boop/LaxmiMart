@@ -1,81 +1,56 @@
-# PHASE 2: Enhanced Product Cards - Implementation Progress
+# Category Split-View Screen Implementation TODO
 
-## Task 2.3: Update Product Model
-- [x] Add `mrp`, `weightPackSize`, `category` fields to Product class
-- [x] Update constructor
-- [x] Update `fromMap()` factory
+## Phase 1: Create Category Helper Logic ✅
+- [x] Create `lib/utils/category_logic.dart`
+  - [x] Define categoryMap with keyword mappings
+  - [x] Implement getSubcategory() method
+  - [x] Implement getIconUrl() method
+  - [x] Implement groupProducts() method
 
-## Task 2.1: Add Quantity Counter Methods to CartProvider
-- [x] Add `updateQuantity()` method
-- [x] Add `isInCart()` method
-- [x] Add `getQuantity()` method
+## Phase 2: Create Category Split-View Screen ✅
+- [x] Create `lib/screens/category_split_view_screen.dart`
+  - [x] Set up StatefulWidget with state management
+  - [x] Implement _loadProducts() from Supabase
+  - [x] Build left sidebar (20% width) with category list
+  - [x] Build right product grid (80% width, 3 columns)
+  - [x] Implement product cards with ADD buttons
+  - [x] Add loading and error states
+  - [x] Implement category selection logic
 
-## Task 2.2: Create Enhanced Product Card Widget
-- [x] Create `lib/widgets/enhanced_product_card.dart`
-- [x] Product image with CachedNetworkImage + fallback
-- [x] Discount badge (green)
-- [x] Stock warning badge (orange, stock <= 5)
-- [x] Smart Add button (ADD vs quantity counter)
-- [x] Out of stock overlay
-- [x] Product name, price, MRP display
+## Phase 3: Integrate into Main App ✅
+- [x] Modify `lib/main.dart`
+  - [x] Import CategorySplitViewScreen
+  - [x] Add category icon button to HomeScreen AppBar
+  - [x] Add navigation to category screen
 
-## Task 2.4: Replace ProductItem with EnhancedProductCard
-- [x] Add import for enhanced_product_card.dart
-- [x] Remove ProductItem class
-- [x] Update GridView.builder to use EnhancedProductCard
-- [x] Remove `.gt('current_stock', 0)` filter to show out-of-stock items
+## Testing
+- [x] Run flutter analyze - ✅ No issues found!
+- [ ] Test category navigation
+- [ ] Test product grouping
+- [ ] Test ADD button functionality
+- [ ] Test product details navigation
 
----
+## Implementation Summary
 
-# PHASE 4: Search Screen - Implementation Progress
+All three phases have been successfully implemented:
 
-## Task 4.1: Create Basic Search Screen
-- [x] Create `lib/screens/product_search_screen.dart`
-- [x] Search bar in AppBar with TextField (autofocus, white text)
-- [x] Debounced search (300ms delay)
-- [x] Case-insensitive search with `.ilike()`
-- [x] Results in GridView using EnhancedProductCard
-- [x] Empty state (search suggestions)
-- [x] No results state
-- [x] Clear button works
+### Files Created:
+1. **lib/utils/category_logic.dart** - Category mapping and grouping logic
+2. **lib/screens/category_split_view_screen.dart** - Split-view screen with 20/80 layout
 
-## Task 4.2: Add Search Icon to HomeScreen
-- [x] Add import for `screens/product_search_screen.dart`
-- [x] Add search IconButton before cart icon in AppBar actions
-- [x] Navigate with `PageTransitionDirection.up`
+### Files Modified:
+1. **lib/main.dart** - Added category icon button to HomeScreen AppBar
 
----
+### Features Implemented:
+- ✅ Category keyword mapping for 15 subcategories
+- ✅ Product grouping by category
+- ✅ Split-view layout (20% left sidebar, 80% right grid)
+- ✅ Category icons with selection highlighting
+- ✅ 3-column product grid
+- ✅ ADD button with quantity counter
+- ✅ Navigation to product details
+- ✅ Loading states and error handling
+- ✅ Integration with existing CartProvider
 
-# PHASE 5: Order History Screen - Implementation Progress
-
-## Task 5.1: Create Order History Screen
-- [x] Create `lib/screens/order_history_screen.dart`
-- [x] Fetch orders for customer by phone number
-- [x] Orders sorted by date (newest first)
-- [x] Status badge with correct color (green=Completed, orange=Pending, blue=other)
-- [x] Expandable cards show order items via `ExpansionTile`
-- [x] Empty state with icon and message
-
-## Task 5.2: Add Order History Button to HomeScreen
-- [x] Add import for `screens/order_history_screen.dart`
-- [x] Add `drawer` property to HomeScreen Scaffold
-- [x] Create `_buildDrawer()` method with DrawerHeader, Order History, Settings, About
-- [x] Clicking Order History navigates to OrderHistoryScreen
-- [x] Drawer closes after selection
-
----
-
-# PHASE 6: UI Polish - Implementation Progress
-
-## Task 6.1: Add Empty Cart Animation
-- [x] Replace plain "Your cart is empty!" text with rich empty state
-- [x] Cart icon (100px, grey)
-- [x] Friendly message text
-- [x] "Start Shopping" button navigates back
-- [x] Centered layout
-
-## Task 6.2: Add Loading Skeleton to HomeScreen
-- [x] Add import for `widgets/skeleton_loader.dart`
-- [x] Replace CircularProgressIndicator with 6 skeleton cards grid
-- [x] Matches grid layout (2 columns, 0.75 aspect ratio)
-- [x] Uses `SkeletonLoader.productCard()` static method
+### Next Steps:
+Run the app with `flutter run` and test the category browsing experience!
