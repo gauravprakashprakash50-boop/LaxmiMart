@@ -1,102 +1,85 @@
 import '../main.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CategoryHelper {
-  // Define the category hierarchy
-  static const Map<String, List<String>> categoryMap = {
-    // Dairy, Bread & Eggs
-    'Milk & Curd': ['milk', 'dahi', 'curd', 'buttermilk', 'chhaas', 'amul'],
-    'Cheese & Butter': ['cheese', 'butter', 'paneer', 'ghee'],
-    'Bread & Bakery': ['bread', 'bun', 'rusk', 'cake', 'croissant', 'pav'],
+  static final _supabase = Supabase.instance.client;
 
-    // Snacks & Munchies
-    'Chips & Crisps': ['lays', 'pringles', 'bingo', 'nachos', 'wafers', 'chips'],
-    'Biscuits': ['parle', 'oreo', 'bourbon', 'good day', 'cookies', 'biscuit'],
-    'Chocolates': [
-      'cadbury',
-      'kitkat',
-      'munch',
-      'silk',
-      '5 star',
-      'dairy milk',
-      'chocolate'
-    ],
+  /// Fetch unique categories from database
+  static Future<List<String>> getCategories() async {
+    try {
+      final response = await _supabase
+          .from('products')
+          .select('category')
+          .not('category', 'is', null)
+          .gt('current_stock', 0); // Only categories with in-stock items
 
-    // Cold Drinks & Juices
-    'Soft Drinks': ['pepsi', 'coke', 'thums up', 'sprite', 'fanta', 'cola'],
-    'Juices': ['real', 'tropicana', 'maaza', 'fruity', 'slice', 'juice'],
-    'Energy & Health': ['red bull', 'sting', 'horlicks', 'bournvita', 'boost'],
-
-    // Personal Care
-    'Bath & Body': ['soap', 'dettol', 'lux', 'pears', 'body wash', 'santoor'],
-    'Hair Care': ['shampoo', 'conditioner', 'hair oil', 'head & shoulders'],
-    'Skincare': ['face wash', 'cream', 'lotion', 'powder', 'fair', 'glow'],
-
-    // Household
-    'Cleaning': ['detergent', 'surf', 'rin', 'vim', 'harpic', 'lizol'],
-    'Kitchen': ['maggi', 'noodles', 'pasta', 'atta', 'rice', 'dal', 'oil'],
-  };
-
-  // Get subcategory for a product based on name
-  static String getSubcategory(String productName) {
-    final nameLower = productName.toLowerCase();
-
-    for (var entry in categoryMap.entries) {
-      final subcategory = entry.key;
-      final keywords = entry.value;
-
-      for (var keyword in keywords) {
-        if (nameLower.contains(keyword)) {
-          return subcategory;
+      // Extract unique categories
+      final categories = <String>{};
+      for (var row in response) {
+        final category = row['category'];
+        if (category != null && category.toString().isNotEmpty) {
+          categories.add(category.toString());
         }
       }
-    }
 
-    return 'Others'; // Default category
+      final sortedCategories = categories.toList()..sort();
+      
+      // Remove "Others" if exists and add it to the end
+      sortedCategories.remove('Others');
+      if (categories.contains('Others')) {
+        sortedCategories.add('Others');
+      }
+
+      return sortedCategories;
+    } catch (e) {
+      print('Error fetching categories: $e');
+      return [];
+    }
   }
 
-  // Get icon URL for subcategory
-  static String getIconUrl(String subcategory) {
+  /// Fetch products by category
+  static Future<List<Product>> getProductsByCategory(String category) async {
+    try {
+      final response = await _supabase
+          .from('products')
+          .select()
+          .eq('category', category)
+          .gt('current_stock', 0)
+          .order('product_name', ascending: true);
+
+      return response.map((e) => Product.fromMap(e)).toList();
+    } catch (e) {
+      print('Error fetching products for category $category: $e');
+      return [];
+    }
+  }
+
+  /// Get icon URL for category
+  static String getIconUrl(String category) {
     const iconMap = {
-      // Dairy icons
-      'Milk & Curd': 'https://cdn-icons-png.flaticon.com/512/2674/2674486.png',
-      'Cheese & Butter': 'https://cdn-icons-png.flaticon.com/512/3050/3050163.png',
-      'Bread & Bakery': 'https://cdn-icons-png.flaticon.com/512/2553/2553691.png',
-
-      // Snacks icons
-      'Chips & Crisps': 'https://cdn-icons-png.flaticon.com/512/3480/3480822.png',
-      'Biscuits': 'https://cdn-icons-png.flaticon.com/512/541/541732.png',
-      'Chocolates': 'https://cdn-icons-png.flaticon.com/512/3076/3076079.png',
-
-      // Drinks icons
-      'Soft Drinks': 'https://cdn-icons-png.flaticon.com/512/2405/2405597.png',
-      'Juices': 'https://cdn-icons-png.flaticon.com/512/2553/2553642.png',
-      'Energy & Health': 'https://cdn-icons-png.flaticon.com/512/924/924514.png',
-
-      // Personal Care icons
-      'Bath & Body': 'https://cdn-icons-png.flaticon.com/512/2553/2553642.png',
-      'Hair Care': 'https://cdn-icons-png.flaticon.com/512/2933/2933116.png',
-      'Skincare': 'https://cdn-icons-png.flaticon.com/512/3774/3774299.png',
-
-      // Household icons
-      'Cleaning': 'https://cdn-icons-png.flaticon.com/512/3050/3050239.png',
-      'Kitchen': 'https://cdn-icons-png.flaticon.com/512/3480/3480826.png',
-
-      // Default
+      'Dairy, Bread & Eggs': 'https://cdn-icons-png.flaticon.com/512/2674/2674486.png',
+      'Snacks & Munchies': 'https://cdn-icons-png.flaticon.com/512/3480/3480822.png',
+      'Cold Drinks & Juices': 'https://cdn-icons-png.flaticon.com/512/2405/2405597.png',
+      'Personal Care': 'https://cdn-icons-png.flaticon.com/512/2933/2933116.png',
+      'Household Essentials': 'https://cdn-icons-png.flaticon.com/512/3050/3050239.png',
+      'Instant Food': 'https://cdn-icons-png.flaticon.com/512/857/857681.png',
+      'Kitchen Staples': 'https://cdn-icons-png.flaticon.com/512/3480/3480826.png',
       'Others': 'https://cdn-icons-png.flaticon.com/512/1170/1170678.png',
     };
-
-    return iconMap[subcategory] ?? iconMap['Others']!;
+    
+    return iconMap[category] ?? iconMap['Others']!;
   }
 
-  // Group products by subcategory
+  /// Legacy method for backward compatibility (used by HomeScreen)
+  /// Groups products by database category
   static Map<String, List<Product>> groupProducts(List<Product> products) {
     final grouped = <String, List<Product>>{};
-
+    
     for (var product in products) {
-      final subcategory = getSubcategory(product.name);
-      grouped.putIfAbsent(subcategory, () => []).add(product);
+      final category = product.category ?? 'Others';
+      grouped.putIfAbsent(category, () => []).add(product);
     }
-
+    
     return grouped;
   }
 }

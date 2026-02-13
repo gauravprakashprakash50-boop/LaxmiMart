@@ -41,16 +41,17 @@ class LaxmiMartApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'LaxmiMart',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD32F2F)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00A82D)), // BlinkIt green
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5), // Off-white background
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFD32F2F),
-          foregroundColor: Colors.white,
-          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF1A1A1A),
+          elevation: 0.5,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFD32F2F),
+            backgroundColor: const Color(0xFF00A82D),
             foregroundColor: Colors.white,
           ),
         ),
@@ -181,6 +182,19 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('LaxmiMart'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.category),
+            tooltip: 'Browse by Category',
+            onPressed: () {
+              Navigator.push(
+                context,
+                SlidePageRoute(
+                  page: const CategorySplitViewScreen(),
+                  direction: PageTransitionDirection.right,
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Search Products',
             onPressed: () {
@@ -251,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
               },
-              backgroundColor: const Color(0xFFD32F2F),
+              backgroundColor: const Color(0xFF00A82D),
               icon: Badge(
                 label: Text(cart.items.length.toString()),
                 child: const Icon(Icons.shopping_cart, color: Colors.white),
@@ -547,7 +561,7 @@ class ProductDetailScreen extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFD32F2F)),
+                            color: Color(0xFF00A82D)),
                       ),
                     ],
                   ),
@@ -688,7 +702,7 @@ class CartScreen extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFD32F2F))),
+                            color: Color(0xFF00A82D))),
                   ],
                 ),
                 const SizedBox(height: 15),

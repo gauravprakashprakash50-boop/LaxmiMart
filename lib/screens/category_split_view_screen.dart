@@ -16,42 +16,57 @@ class CategorySplitViewScreen extends StatefulWidget {
 }
 
 class _CategorySplitViewScreenState extends State<CategorySplitViewScreen> {
-  final _supabase = Supabase.instance.client;
-  String? _selectedSubcategory;
-  Map<String, List<Product>> _groupedProducts = {};
+  String? _selectedCategory;
+  List<String> _categories = [];
+  List<Product> _currentProducts = [];
   bool _isLoading = true;
+  bool _isLoadingProducts = false;
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _loadCategories();
   }
 
-  /// Load products from Supabase and group them by category
-  Future<void> _loadProducts() async {
+  /// Load categories from database
+  Future<void> _loadCategories() async {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _supabase
-          .from('products')
-          .select()
-          .gt('current_stock', 0)
-          .order('product_name', ascending: true);
-
-      final products = (response as List)
-          .map((e) => Product.fromMap(e as Map<String, dynamic>))
-          .toList();
-
+      final categories = await CategoryHelper.getCategories();
+      
       setState(() {
-        _groupedProducts = CategoryHelper.groupProducts(products);
-        // Select first subcategory by default
-        if (_groupedProducts.isNotEmpty) {
-          _selectedSubcategory = _groupedProducts.keys.first;
+        _categories = categories;
+        // Select first category by default
+        if (_categories.isNotEmpty) {
+          _selectedCategory = _categories.first;
+          _loadCategoryProducts(_selectedCategory!);
         }
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load categories: $e')),
+        );
+      }
+    }
+  }
+
+  /// Load products for a specific category
+  Future<void> _loadCategoryProducts(String category) async {
+    setState(() => _isLoadingProducts = true);
+
+    try {
+      final products = await CategoryHelper.getProductsByCategory(category);
+      
+      setState(() {
+        _currentProducts = products;
+        _isLoadingProducts = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingProducts = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load products: $e')),
@@ -82,23 +97,22 @@ class _CategorySplitViewScreenState extends State<CategorySplitViewScreen> {
 
   /// Build left sidebar with category list
   Widget _buildLeftSidebar() {
-    final subcategories = _groupedProducts.keys.toList();
-
     return Expanded(
       flex: 2, // 20% width
       child: Container(
-        color: Colors.grey[200],
+        color: const Color(0xFFF5F5F5), // Off-white background
         child: ListView.builder(
-          itemCount: subcategories.length,
+          itemCount: _categories.length,
           itemBuilder: (context, index) {
-            final subcategory = subcategories[index];
-            final isSelected = _selectedSubcategory == subcategory;
+            final category = _categories[index];
+            final isSelected = _selectedCategory == category;
 
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  _selectedSubcategory = subcategory;
+                  _selectedCategory = category;
                 });
+                _loadCategoryProducts(category);
               },
               child: Container(
                 decoration: BoxDecoration(
@@ -106,7 +120,7 @@ class _CategorySplitViewScreenState extends State<CategorySplitViewScreen> {
                   border: Border(
                     left: BorderSide(
                       color: isSelected
-                          ? const Color(0xFF00C853)
+                          ? const Color(0xFF00A82D)
                           : Colors.transparent,
                       width: 4,
                     ),
@@ -116,35 +130,56 @@ class _CategorySplitViewScreenState extends State<CategorySplitViewScreen> {
                     const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 child: Column(
                   children: [
-                    // Category Icon
-                    CachedNetworkImage(
-                      imageUrl: CategoryHelper.getIconUrl(subcategory),
-                      width: 40,
-                      height: 40,
-                      placeholder: (context, url) => const Icon(
-                        Icons.category,
-                        size: 40,
-                        color: Colors.grey,
+                    // Category Icon with circular background
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: isSelected 
+                          ? const Color(0xFF00A82D).withOpacity(0.1)
+                          : Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: isSelected ? [
+                          BoxShadow(
+                            color: const Color(0xFF00A82D).withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ] : [],
                       ),
-                      errorWidget: (context, url, error) => const Icon(
-                        Icons.category,
-                        size: 40,
-                        color: Colors.grey,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: CachedNetworkImage(
+                          imageUrl: CategoryHelper.getIconUrl(category),
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                          placeholder: (context, url) => Icon(
+                            Icons.category,
+                            size: 32,
+                            color: isSelected ? const Color(0xFF00A82D) : Colors.grey,
+                          ),
+                          errorWidget: (context, url, error) => Icon(
+                            Icons.category,
+                            size: 32,
+                            color: isSelected ? const Color(0xFF00A82D) : Colors.grey,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
 
                     // Category Name
                     Text(
-                      subcategory,
+                      category,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
-                            ? const Color(0xFF00C853)
-                            : Colors.black87,
+                            ? const Color(0xFF00A82D)
+                            : const Color(0xFF666666),
+                        height: 1.3,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -161,16 +196,21 @@ class _CategorySplitViewScreenState extends State<CategorySplitViewScreen> {
 
   /// Build right side product grid
   Widget _buildRightProductGrid() {
-    if (_selectedSubcategory == null) {
+    if (_selectedCategory == null) {
       return const Expanded(
         flex: 8,
         child: Center(child: Text('No category selected')),
       );
     }
 
-    final products = _groupedProducts[_selectedSubcategory!] ?? [];
+    if (_isLoadingProducts) {
+      return const Expanded(
+        flex: 8,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    if (products.isEmpty) {
+    if (_currentProducts.isEmpty) {
       return Expanded(
         flex: 8,
         child: Center(
@@ -202,9 +242,9 @@ class _CategorySplitViewScreenState extends State<CategorySplitViewScreen> {
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
-          itemCount: products.length,
+          itemCount: _currentProducts.length,
           itemBuilder: (context, index) {
-            return _buildProductCard(products[index]);
+            return _buildProductCard(_currentProducts[index]);
           },
         ),
       ),
