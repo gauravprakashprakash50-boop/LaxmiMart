@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'cart_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'main.dart' hide CartScreen;
 import 'cart_screen.dart';
-import 'product_details_screen.dart'; // NEW IMPORT
-import 'models.dart';
 import 'routes/page_transitions.dart';
 import 'widgets/skeleton_loader.dart';
-import 'services/error_handler.dart';
-import 'providers/connectivity_provider.dart';
-import 'widgets/common_widgets.dart';
-import 'widgets/cached_image_widget.dart';
-import 'core/exceptions/app_exceptions.dart';
+import 'screens/product_search_screen.dart';
+import 'screens/category_products_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,92 +18,48 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _supabase = Supabase.instance.client;
-
-  final List<Map<String, dynamic>> categories = [
-    {'name': 'All', 'icon': Icons.grid_view, 'color': Colors.redAccent},
-    {'name': 'Dairy', 'icon': Icons.water_drop, 'color': Colors.blue},
-    {'name': 'Bakery', 'icon': Icons.breakfast_dining, 'color': Colors.brown},
-    {'name': 'Veg', 'icon': Icons.eco, 'color': Colors.green},
-    {'name': 'Snacks', 'icon': Icons.fastfood, 'color': Colors.orange},
-    {'name': 'Drinks', 'icon': Icons.local_bar, 'color': Colors.purple},
-  ];
-
+  List<Category> _categories = [];
   bool _isLoading = true;
-  String? _errorMessage;
-  List<Product> _products = [];
-  String _selectedCategory = 'All';
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchProducts();
+    _loadCategories();
   }
 
-  Future<void> _fetchProducts() async {
-    if (!mounted) return;
-
+  Future<void> _loadCategories() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _error = null;
     });
-
     try {
-      // Check connectivity first
-      final connectivityProvider =
-          Provider.of<ConnectivityProvider>(context, listen: false);
-      if (!connectivityProvider.isConnected) {
-        throw NetworkException('No internet connection');
-      }
-
-      // FIXED: Removed the 'if (response == null)' check.
-      // Supabase .select() returns the data directly or throws an error.
-      final response = await _supabase.from('products').select();
-
-      final data = response as List<dynamic>;
-      final products = data.map((json) => Product.fromJson(json)).toList();
+      final response = await _supabase
+          .from('categories')
+          .select()
+          .order('display_order', ascending: true);
 
       if (mounted) {
         setState(() {
-          _products = _selectedCategory == 'All'
-              ? products
-              : products
-                  .where((p) =>
-                      p.category.toLowerCase() ==
-                      _selectedCategory.toLowerCase())
-                  .toList();
-          _isLoading = false;
-        });
-      }
-    } on PostgrestException catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Failed to load products: ${e.message}';
+          _categories = (response as List)
+              .map((e) => Category.fromJson(e))
+              .toList();
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString();
+          _error = e.toString();
           _isLoading = false;
         });
       }
-      debugPrint('DB Error: $e');
     }
-  }
-
-  void _filterByCategory(String category) {
-    if (_selectedCategory == category) return;
-
-    setState(() {
-      _selectedCategory = category;
-    });
-    _fetchProducts();
   }
 
   @override
   Widget build(BuildContext context) {
-    final cart = Provider.of<CartService>(context);
+    final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
@@ -115,294 +67,251 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           CustomScrollView(
             slivers: [
-              // --- 1. APP BAR ---
+
+              // ── APP BAR ──────────────────────────────────────────
               SliverAppBar(
-                backgroundColor: const Color(0xFFD32F2F),
+                backgroundColor: Colors.white,
                 floating: true,
                 pinned: true,
-                expandedHeight: 140,
+                expandedHeight: 120,
                 elevation: 0,
+                shadowColor: const Color(0x12000000),
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
-                    padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD32F2F),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(24),
-                        bottomRight: Radius.circular(24),
-                      ),
-                    ),
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(16, 50, 16, 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        // Row 1: Store name + notification
+                        Row(
                           children: [
-                            Text(
-                              "LaxmiMart",
+                            const Icon(Icons.location_on,
+                                color: Color(0xFF0C831F), size: 18),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'LaxmiMart',
                               style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0C831F),
+                              ),
                             ),
-                            Icon(Icons.notifications_outlined,
-                                color: Colors.white),
+                            const Icon(Icons.keyboard_arrow_down,
+                                size: 18, color: Color(0xFF3D3D3D)),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.notifications_outlined,
+                                  color: Color(0xFF3D3D3D)),
+                              onPressed: () {},
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Container(
-                          height: 45,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 10),
+
+                        // Row 2: Clickable search bar
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            SlidePageRoute(
+                              page: const ProductSearchScreen(),
+                              direction: PageTransitionDirection.up,
+                            ),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.search, color: Colors.grey),
-                              SizedBox(width: 8),
-                              Text("Search products...",
-                                  style: TextStyle(color: Colors.grey)),
-                            ],
+                          child: Container(
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                  color: const Color(0xFFEEEEEE), width: 1),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x141C1C1C),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 14),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.search,
+                                    color: Color(0xFF0C831F), size: 20),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Search products, brands, barcodes...',
+                                  style: TextStyle(
+                                      color: Colors.grey[500], fontSize: 14),
+                                ),
+                                const Spacer(),
+                                Icon(Icons.qr_code_scanner,
+                                    color: Colors.grey[400], size: 20),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              ),
-
-              // --- 2. CATEGORIES ---
-              SliverToBoxAdapter(
-                child: Container(
-                  height: 110,
-                  margin: const EdgeInsets.only(top: 16),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: categories.length,
-                    itemBuilder: (context, index) {
-                      final category = categories[index];
-                      final isSelected = _selectedCategory == category['name'];
-
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 20),
-                        child: GestureDetector(
-                          onTap: () =>
-                              _filterByCategory(category['name'] as String),
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? (category['color'] as Color)
-                                          .withAlpha(50)
-                                      : (category['color'] as Color)
-                                          .withAlpha(30),
-                                  shape: BoxShape.circle,
-                                  border: isSelected
-                                      ? Border.all(
-                                          color: category['color'] as Color,
-                                          width: 2,
-                                        )
-                                      : null,
-                                ),
-                                child: Icon(
-                                  category['icon'] as IconData,
-                                  color: category['color'] as Color,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                category['name'] as String,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? Colors.black
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(1),
+                  child: Divider(height: 1, color: Color(0xFFEEEEEE)),
                 ),
               ),
 
-              // --- 3. PRODUCTS ---
+              // ── SECTION HEADER ────────────────────────────────────
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
                   child: Text(
-                    "Popular Items",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    'Shop by Category',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF3D3D3D),
+                    ),
                   ),
                 ),
               ),
 
-              // PRODUCTS SECTION
+              // ── CATEGORIES GRID ───────────────────────────────────
               if (_isLoading)
                 SliverPadding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
+                      crossAxisCount: 4,
+                      childAspectRatio: 0.8,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => SkeletonLoader.productCard(),
-                      childCount: 6,
+                      (context, index) => SkeletonLoader.categoryCard(),
+                      childCount: 8,
                     ),
                   ),
                 )
-              else if (_errorMessage != null)
+              else if (_error != null)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: ErrorDisplayWidget(
-                      error: ErrorHandler.handleError(_errorMessage,
-                          onRetry: _fetchProducts),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error_outline,
+                            size: 48, color: Colors.red),
+                        const SizedBox(height: 12),
+                        Text(_error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.red)),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _loadCategories,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0C831F)),
+                        ),
+                      ],
                     ),
                   ),
                 )
-              else if (_products.isEmpty)
-                SliverToBoxAdapter(
+              else if (_categories.isEmpty)
+                const SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(40),
+                    padding: EdgeInsets.all(40),
                     child: Center(
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.inbox_outlined,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            "No products found",
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Try changing the category or check back later",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
+                      child: Text(
+                          'No categories found.\nRun the SQL script in Supabase.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey)),
                     ),
                   ),
                 )
               else
                 SliverPadding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
+                      crossAxisCount: 4,
+                      childAspectRatio: 0.8,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => _buildProductGridCard(
-                          context, _products[index], cart),
-                      childCount: _products.length,
+                      (context, index) =>
+                          _buildCategoryCard(_categories[index]),
+                      childCount: _categories.length,
                     ),
                   ),
                 ),
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
 
-          // --- 4. FLOATING CART ---
-          if (cart.itemCount > 0)
+          // ── FLOATING CART ─────────────────────────────────────────
+          if (cart.items.isNotEmpty)
             Positioned(
-              left: 20,
-              right: 20,
-              bottom: 30,
+              left: 16,
+              right: 16,
+              bottom: 24,
               child: GestureDetector(
                 onTap: () => Navigator.push(
-                    context,
-                    SlidePageRoute(
-                      page: const CartScreen(),
-                      direction: PageTransitionDirection.right,
-                    )),
+                  context,
+                  SlidePageRoute(
+                    page: const CartScreen(),
+                    direction: PageTransitionDirection.right,
+                  ),
+                ),
                 child: Container(
-                  height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    borderRadius: BorderRadius.circular(30),
+                    color: const Color(0xFF0C831F),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withAlpha(50),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5))
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(10)),
-                            child: Text("${cart.itemCount}",
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("₹${cart.totalAmount}",
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
-                              const Text("Total",
-                                  style: TextStyle(
-                                      color: Colors.white54, fontSize: 10)),
-                            ],
-                          ),
-                        ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A6B19),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${cart.items.length} item${cart.items.length > 1 ? 's' : ''}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12),
+                        ),
                       ),
-                      const Row(
-                        children: [
-                          Text("View Cart",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold)),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward_rounded,
-                              color: Colors.white, size: 18),
-                        ],
-                      )
+                      const Spacer(),
+                      const Text(
+                        'View Cart',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_ios,
+                          color: Colors.white, size: 14),
                     ],
                   ),
                 ),
@@ -413,113 +322,70 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProductGridCard(
-      BuildContext context, Product product, CartService cart) {
-    final int qty = cart.getQuantity(product.id);
-
+  Widget _buildCategoryCard(Category category) {
     return GestureDetector(
-      // NEW: Navigate to Details Page on tap
-      onTap: () {
-        Navigator.push(
-            context,
-            SlidePageRoute(
-                page: ProductDetailsScreen(product: product),
-                direction: PageTransitionDirection.right));
-      },
+      onTap: () => Navigator.push(
+        context,
+        SlidePageRoute(
+          page: CategoryProductsScreen(category: category),
+          direction: PageTransitionDirection.right,
+        ),
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
+          boxShadow: const [
             BoxShadow(
-                color: Colors.grey.withAlpha(20),
-                blurRadius: 10,
-                offset: const Offset(0, 4))
+              color: Color(0x0F000000),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: ImageCacheManager.buildProductImage(
-                    imageUrl: product.imageUrl,
-                    fit: BoxFit.contain,
-                  ),
-                ),
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFFEC),
+                borderRadius: BorderRadius.circular(10),
               ),
+              padding: const EdgeInsets.all(10),
+              child: category.imageUrl != null &&
+                      category.imageUrl!.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: category.imageUrl!,
+                      fit: BoxFit.contain,
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.category_outlined,
+                        color: Color(0xFF0C831F),
+                        size: 24,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.category_outlined,
+                      color: Color(0xFF0C831F),
+                      size: 24,
+                    ),
             ),
+            const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(product.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text(product.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("₹${product.price}",
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w900, fontSize: 14)),
-                      qty == 0
-                          ? InkWell(
-                              onTap: () => cart.addToCart(product),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                    color: Colors.red[50],
-                                    borderRadius: BorderRadius.circular(8)),
-                                child: const Icon(Icons.add,
-                                    color: Color(0xFFD32F2F), size: 20),
-                              ),
-                            )
-                          : Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 4),
-                              decoration: BoxDecoration(
-                                  color: const Color(0xFFD32F2F),
-                                  borderRadius: BorderRadius.circular(8)),
-                              child: Row(
-                                children: [
-                                  InkWell(
-                                      onTap: () =>
-                                          cart.removeSingleItem(product.id),
-                                      child: const Icon(Icons.remove,
-                                          color: Colors.white, size: 14)),
-                                  const SizedBox(width: 8),
-                                  Text("$qty",
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12)),
-                                  const SizedBox(width: 8),
-                                  InkWell(
-                                      onTap: () => cart.addToCart(product),
-                                      child: const Icon(Icons.add,
-                                          color: Colors.white, size: 14)),
-                                ],
-                              ),
-                            ),
-                    ],
-                  )
-                ],
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                category.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF3D3D3D),
+                  height: 1.3,
+                ),
               ),
             ),
           ],

@@ -51,7 +51,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
       final response = await _supabase
           .from('products')
           .select()
-          .eq('category', widget.category.name)
+          .eq('category_id', int.parse(widget.category.id))
           .gt('current_stock', 0)
           .order('product_name', ascending: true)
           .range(0, _pageSize - 1);
@@ -80,7 +80,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
       final response = await _supabase
           .from('products')
           .select()
-          .eq('category', widget.category.name)
+          .eq('category_id', int.parse(widget.category.id))
           .gt('current_stock', 0)
           .order('product_name', ascending: true)
           .range(offset, offset + _pageSize - 1);
@@ -140,7 +140,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.68,
+                    childAspectRatio: 0.62,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -169,7 +169,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.68,
+                        childAspectRatio: 0.62,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
                       ),

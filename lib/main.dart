@@ -39,7 +39,7 @@ class LaxmiMartApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'LaxmiMart',
+      title: 'Odyit',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF0C831F),
@@ -74,7 +74,7 @@ class LaxmiMartApp extends StatelessWidget {
 // --- 3. STATE MANAGEMENT ---
 
 class Category {
-  final String id; // Use category name as ID since no separate categories table
+  final String id;
   final String name;
   final String? imageUrl;
 
@@ -83,6 +83,14 @@ class Category {
     required this.name,
     this.imageUrl,
   });
+
+  factory Category.fromJson(Map<String, dynamic> json) {
+    return Category(
+      id: json['id'].toString(),
+      name: json['name'] as String,
+      imageUrl: json['image_url'] as String?,
+    );
+  }
 }
 
 class Product {
@@ -127,6 +135,8 @@ class Product {
       barcode: map['barcode']?.toString(),
     );
   }
+
+  factory Product.fromJson(Map<String, dynamic> json) => Product.fromMap(json);
 }
 
 class CartItem {
@@ -212,34 +222,59 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCategories();
   }
 
-  /// Load categories from distinct 'category' values in the products table
   Future<void> _loadCategories() async {
     setState(() { _isLoading = true; _error = null; });
     try {
+      // Query the dedicated categories table
       final response = await _supabase
-          .from('products')
-          .select('category')
-          .not('category', 'is', null)
-          .gt('current_stock', 0);
+          .from('categories')
+          .select('id, name, image_url')
+          .order('name', ascending: true);
 
-      // Extract distinct, non-null category names
-      final Set<String> seen = {};
-      final List<Category> cats = [];
-      for (final row in (response as List)) {
-        final name = row['category'] as String?;
-        if (name != null && name.isNotEmpty && seen.add(name)) {
-          cats.add(Category(id: name, name: name));
+      final List<Category> cats = (response as List).map((row) {
+        return Category(
+          id: row['id'].toString(),
+          name: row['name'] as String,
+          imageUrl: row['image_url'] as String?,
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Fallback: derive categories from the text category column in products
+      try {
+        final response = await _supabase
+            .from('products')
+            .select('category')
+            .not('category', 'is', null)
+            .gt('current_stock', 0);
+
+        final Set<String> seen = {};
+        final List<Category> cats = [];
+        for (final row in (response as List)) {
+          final name = row['category'] as String?;
+          if (name != null && name.isNotEmpty && seen.add(name)) {
+            cats.add(Category(id: name, name: name));
+          }
+        }
+        cats.sort((a, b) => a.name.compareTo(b.name));
+
+        if (mounted) {
+          setState(() {
+            _categories = cats;
+            _isLoading = false;
+          });
+        }
+      } catch (e2) {
+        if (mounted) {
+          setState(() { _error = e2.toString(); _isLoading = false; });
         }
       }
-      // Sort alphabetically
-      cats.sort((a, b) => a.name.compareTo(b.name));
-
-      setState(() {
-        _categories = cats;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() { _error = e.toString(); _isLoading = false; });
     }
   }
 
@@ -259,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 backgroundColor: Colors.white,
                 floating: true,
                 pinned: true,
-                expandedHeight: 130,
+                expandedHeight: 80,
                 elevation: 0,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
@@ -268,68 +303,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Row 1: Location + Notification
+                        // Row 1: App name + Search
                         Row(
                           children: [
-                            const Icon(Icons.location_on, color: Color(0xFF0C831F), size: 18),
-                            const SizedBox(width: 4),
                             Text(
-                              'LaxmiMart',
+                              'Odyit',
                               style: GoogleFonts.poppins(
                                 color: const Color(0xFF0C831F),
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3D3D3D), size: 18),
                             const Spacer(),
-                            const Icon(Icons.notifications_outlined, color: Color(0xFF3D3D3D), size: 24),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Row 2: Search bar
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              SlidePageRoute(
-                                page: const ProductSearchScreen(),
-                                direction: PageTransitionDirection.up,
-                              ),
-                            );
-                          },
-                          child: Container(
-                            height: 46,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: const Color(0xFFEEEEEE)),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x141C1C1C),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.search, color: Color(0xFF0C831F), size: 22),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Search products, brands...',
-                                  style: GoogleFonts.poppins(
-                                    color: const Color(0xFF737373),
-                                    fontSize: 13,
+                            IconButton(
+                              icon: const Icon(Icons.search, color: Color(0xFF0C831F), size: 26),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  SlidePageRoute(
+                                    page: const ProductSearchScreen(),
+                                    direction: PageTransitionDirection.up,
                                   ),
-                                ),
-                                const Spacer(),
-                                const Icon(Icons.qr_code_scanner, color: Color(0xFF737373), size: 20),
-                              ],
+                                );
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
