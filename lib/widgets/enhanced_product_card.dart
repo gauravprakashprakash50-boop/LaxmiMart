@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../main.dart';
@@ -19,76 +20,72 @@ class EnhancedProductCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white, // White card on grey background
-          borderRadius: BorderRadius.circular(15), // Soft rounded corners
-          boxShadow: [
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06), // Subtle shadow
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Color(0x261C1C1C),
+              blurRadius: 4,
+              offset: Offset(0, 1),
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Product Image
-            Expanded(
-              flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(15),
-                ),
-                child: _buildProductImage(),
+            Container(
+              height: 130,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
               ),
+              padding: const EdgeInsets.all(16),
+              child: _buildProductImage(),
             ),
 
             // Product Details
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Product Name (2 lines max)
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A1A),
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Weight/Pack Size
+                  Text(
+                    product.weightPackSize ?? '1 unit',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF737373),
                     ),
-                    
-                    // Weight/Pack Size
-                    if (product.weightPackSize != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 3),
-                        child: Text(
-                          product.weightPackSize!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
+                  ),
+                  const SizedBox(height: 4),
 
-                    const Spacer(),
-
-                    // Price & ADD Button Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildPriceSection(),
-                        _buildAddButton(context),
-                      ],
+                  // Product Name (2 lines max)
+                  Text(
+                    product.name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF3D3D3D),
+                      height: 1.3,
                     ),
-                  ],
-                ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Price & ADD Button Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildPriceSection(),
+                      _buildAddButton(context),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
@@ -101,29 +98,22 @@ class EnhancedProductCard extends StatelessWidget {
     if (product.imageUrl != null && product.imageUrl!.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: product.imageUrl!,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
-          color: const Color(0xFFF5F5F5),
-          child: const Center(
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+        fit: BoxFit.contain,
+        placeholder: (context, url) => const Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0C831F)),
         ),
-        errorWidget: (context, url, error) => Container(
-          color: const Color(0xFFF5F5F5),
-          child: Icon(Icons.shopping_bag_outlined, 
-            size: 40, 
-            color: Colors.grey[400],
-          ),
+        errorWidget: (context, url, error) => Icon(
+          Icons.shopping_bag_outlined,
+          size: 40,
+          color: Colors.grey[400],
         ),
       );
     }
-    
-    return Container(
-      color: const Color(0xFFF5F5F5),
-      child: Icon(Icons.shopping_bag_outlined, 
-        size: 40, 
-        color: Colors.grey[400],
-      ),
+
+    return Icon(
+      Icons.shopping_bag_outlined,
+      size: 40,
+      color: Colors.grey[400],
     );
   }
 
@@ -131,23 +121,20 @@ class EnhancedProductCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Selling Price
         Text(
           '₹${product.price.toStringAsFixed(0)}',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A1A),
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF3D3D3D),
           ),
         ),
-        
-        // MRP (crossed out if different)
         if (product.mrp != null && product.mrp! > product.price)
           Text(
             '₹${product.mrp!.toStringAsFixed(0)}',
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 11,
-              color: Colors.grey[500],
+              color: const Color(0xFF9E9E9E),
               decoration: TextDecoration.lineThrough,
             ),
           ),
@@ -158,87 +145,68 @@ class EnhancedProductCard extends StatelessWidget {
   Widget _buildAddButton(BuildContext context) {
     return Consumer<CartProvider>(
       builder: (context, cart, child) {
-        final isInCart = cart.items.containsKey(product.id);
+        final qty = cart.getQuantity(product.id);
 
-        if (!isInCart) {
-          return Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFF00A82D), width: 1.5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextButton(
-              onPressed: () {
-                cart.addToCart(product);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${product.name} added'),
-                    duration: const Duration(milliseconds: 800),
-                    backgroundColor: const Color(0xFF00A82D),
-                  ),
-                );
-              },
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(50, 30),
+        if (qty == 0) {
+          return GestureDetector(
+            onTap: () => cart.addToCart(product),
+            child: Container(
+              height: 36,
+              width: 88,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7FFF9),
+                border: Border.all(color: const Color(0xFF0C831F), width: 0.5),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'ADD',
-                style: TextStyle(
-                  color: Color(0xFF00A82D),
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+              child: Center(
+                child: Text(
+                  'ADD',
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF0C831F),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
           );
         }
 
-        // Quantity counter
-        final quantity = cart.items[product.id]!.quantity;
         return Container(
-          height: 32,
+          height: 36,
+          width: 88,
           decoration: BoxDecoration(
-            color: const Color(0xFF00A82D),
+            color: const Color(0xFF0C831F),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              IconButton(
-                icon: const Icon(Icons.remove, color: Colors.white, size: 16),
-                onPressed: () {
-                  if (quantity > 1) {
-                    cart.updateQuantity(product.id, quantity - 1);
+              GestureDetector(
+                onTap: () {
+                  if (qty > 1) {
+                    cart.updateQuantity(product.id, qty - 1);
                   } else {
                     cart.removeFromCart(product.id);
                   }
                 },
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                child: const Icon(Icons.remove, color: Colors.white, size: 16),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  '$quantity',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+              Text(
+                '$qty',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.add, color: Colors.white, size: 16),
-                onPressed: () {
-                  if (quantity < product.stock) {
+              GestureDetector(
+                onTap: () {
+                  if (qty < product.stock) {
                     cart.addToCart(product);
                   }
                 },
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                child: const Icon(Icons.add, color: Colors.white, size: 16),
               ),
             ],
           ),

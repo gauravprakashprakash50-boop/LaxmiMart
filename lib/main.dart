@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -40,17 +41,27 @@ class LaxmiMartApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'LaxmiMart',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00A82D)), // BlinkIt green
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0C831F),
+          primary: const Color(0xFF0C831F),
+        ),
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5), // Off-white background
-        appBarTheme: const AppBarTheme(
+        scaffoldBackgroundColor: const Color(0xFFF9F9F9),
+        textTheme: GoogleFonts.poppinsTextTheme(),
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF1A1A1A),
-          elevation: 0.5,
+          foregroundColor: const Color(0xFF3D3D3D),
+          elevation: 0,
+          shadowColor: const Color(0x12000000),
+          titleTextStyle: GoogleFonts.poppins(
+            color: const Color(0xFF3D3D3D),
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00A82D),
+            backgroundColor: const Color(0xFF0C831F),
             foregroundColor: Colors.white,
           ),
         ),
@@ -63,26 +74,15 @@ class LaxmiMartApp extends StatelessWidget {
 // --- 3. STATE MANAGEMENT ---
 
 class Category {
-  final int id;
+  final String id; // Use category name as ID since no separate categories table
   final String name;
   final String? imageUrl;
-  final int displayOrder;
 
   Category({
     required this.id,
     required this.name,
     this.imageUrl,
-    required this.displayOrder,
   });
-
-  factory Category.fromMap(Map<String, dynamic> map) {
-    return Category(
-      id: map['id'] as int,
-      name: map['name'] as String,
-      imageUrl: map['image_url'] as String?,
-      displayOrder: map['display_order'] ?? 0,
-    );
-  }
 }
 
 class Product {
@@ -212,17 +212,30 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCategories();
   }
 
-  /// ONLY load categories (8 rows) — super fast
+  /// Load categories from distinct 'category' values in the products table
   Future<void> _loadCategories() async {
     setState(() { _isLoading = true; _error = null; });
     try {
       final response = await _supabase
-          .from('categories')
-          .select()
-          .order('display_order', ascending: true);
+          .from('products')
+          .select('category')
+          .not('category', 'is', null)
+          .gt('current_stock', 0);
+
+      // Extract distinct, non-null category names
+      final Set<String> seen = {};
+      final List<Category> cats = [];
+      for (final row in (response as List)) {
+        final name = row['category'] as String?;
+        if (name != null && name.isNotEmpty && seen.add(name)) {
+          cats.add(Category(id: name, name: name));
+        }
+      }
+      // Sort alphabetically
+      cats.sort((a, b) => a.name.compareTo(b.name));
 
       setState(() {
-        _categories = (response as List).map((e) => Category.fromMap(e)).toList();
+        _categories = cats;
         _isLoading = false;
       });
     } catch (e) {
@@ -235,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF9F9F9),
       body: Stack(
         children: [
           CustomScrollView(
@@ -243,38 +256,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // ── APP BAR ──────────────────────────────────────────
               SliverAppBar(
-                backgroundColor: const Color(0xFFD32F2F),
+                backgroundColor: Colors.white,
                 floating: true,
                 pinned: true,
-                expandedHeight: 150,
+                expandedHeight: 130,
                 elevation: 0,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
-                    padding: const EdgeInsets.fromLTRB(20, 55, 20, 16),
-                    color: const Color(0xFFD32F2F),
+                    padding: const EdgeInsets.fromLTRB(16, 48, 16, 10),
+                    color: Colors.white,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Row 1: Location + Notification
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            const Icon(Icons.location_on, color: Color(0xFF0C831F), size: 18),
+                            const SizedBox(width: 4),
+                            Text(
                               'LaxmiMart',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF0C831F),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                              onPressed: () {},
-                            ),
+                            const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3D3D3D), size: 18),
+                            const Spacer(),
+                            const Icon(Icons.notifications_outlined, color: Color(0xFF3D3D3D), size: 24),
                           ],
                         ),
                         const SizedBox(height: 10),
 
-                        // ── REAL CLICKABLE SEARCH BAR ──
+                        // Row 2: Search bar
                         GestureDetector(
                           onTap: () {
                             Navigator.push(
@@ -289,19 +303,30 @@ class _HomeScreenState extends State<HomeScreen> {
                             height: 46,
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFEEEEEE)),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x141C1C1C),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             child: Row(
                               children: [
-                                const Icon(Icons.search, color: Color(0xFF00A82D), size: 22),
+                                const Icon(Icons.search, color: Color(0xFF0C831F), size: 22),
                                 const SizedBox(width: 10),
                                 Text(
-                                  'Search products, brands, barcodes...',
-                                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                                  'Search products, brands...',
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF737373),
+                                    fontSize: 13,
+                                  ),
                                 ),
                                 const Spacer(),
-                                Icon(Icons.qr_code_scanner, color: Colors.grey[400], size: 20),
+                                const Icon(Icons.qr_code_scanner, color: Color(0xFF737373), size: 20),
                               ],
                             ),
                           ),
@@ -310,18 +335,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(1),
+                  child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                ),
               ),
 
               // ── SECTION HEADER ────────────────────────────────────
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
                   child: Text(
                     'Shop by Category',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A1A),
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF3D3D3D),
                     ),
                   ),
                 ),
@@ -334,9 +363,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4,
-                      childAspectRatio: 0.8,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.75,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => SkeletonLoader.categoryCard(),
@@ -350,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const Icon(Icons.error_outline, size: 48, color: Color(0xFF0C831F)),
                         const SizedBox(height: 12),
                         Text(_error!, textAlign: TextAlign.center),
                         const SizedBox(height: 12),
@@ -368,9 +397,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4,
-                      childAspectRatio: 0.8,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.75,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => _buildCategoryCard(_categories[index]),
@@ -379,16 +408,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           ),
 
           // ── FLOATING CART ─────────────────────────────────────────
           if (cart.items.isNotEmpty)
             Positioned(
-              left: 20,
-              right: 20,
-              bottom: 30,
+              left: 16,
+              right: 16,
+              bottom: 24,
               child: GestureDetector(
                 onTap: () => Navigator.push(
                   context,
@@ -398,60 +427,46 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 child: Container(
-                  height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
+                    color: const Color(0xFF0C831F),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x33000000), blurRadius: 5, offset: Offset(0, 3)),
+                      BoxShadow(color: Color(0x24000000), blurRadius: 10, offset: Offset(0, 6)),
+                      BoxShadow(color: Color(0x1F000000), blurRadius: 18, offset: Offset(0, 1)),
                     ],
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white24,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '${cart.items.length}',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
+                      Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A6B19),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${cart.items.length} item${cart.items.length > 1 ? 's' : ''}',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
                           ),
-                          const SizedBox(width: 12),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '₹${cart.totalAmount.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const Text('Total', style: TextStyle(color: Colors.white54, fontSize: 10)),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
-                      const Row(
-                        children: [
-                          Text('View Cart', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
-                        ],
+                      const Spacer(),
+                      Text(
+                        'View Cart',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                       ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+                      const SizedBox(width: 16),
                     ],
                   ),
                 ),
@@ -476,12 +491,13 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Color(0x261C1C1C),
+              blurRadius: 4,
+              offset: Offset(0, 1),
             ),
           ],
         ),
@@ -489,23 +505,23 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FAF0),
-                borderRadius: BorderRadius.circular(14),
+                color: const Color(0xFFECFFEC),
+                borderRadius: BorderRadius.circular(10),
               ),
               padding: const EdgeInsets.all(10),
               child: category.imageUrl != null
                   ? CachedNetworkImage(
                       imageUrl: category.imageUrl!,
                       fit: BoxFit.contain,
-                      placeholder: (_, __) => const CircularProgressIndicator(strokeWidth: 2),
-                      errorWidget: (_, __, ___) => const Icon(Icons.category, color: Color(0xFF00A82D)),
+                      placeholder: (_, __) => const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0C831F)),
+                      errorWidget: (_, __, ___) => const Icon(Icons.category, color: Color(0xFF0C831F)),
                     )
-                  : const Icon(Icons.category, color: Color(0xFF00A82D)),
+                  : const Icon(Icons.category, color: Color(0xFF0C831F)),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
@@ -513,10 +529,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A),
+                  color: const Color(0xFF3D3D3D),
                   height: 1.3,
                 ),
               ),

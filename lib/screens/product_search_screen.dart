@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 import '../main.dart';
-import '../widgets/enhanced_product_card.dart';
 import '../routes/page_transitions.dart';
 
 class ProductSearchScreen extends StatefulWidget {
@@ -15,8 +17,8 @@ class ProductSearchScreen extends StatefulWidget {
 class _ProductSearchScreenState extends State<ProductSearchScreen> {
   final _supabase = Supabase.instance.client;
   final _searchController = TextEditingController();
-  final _debouncer = Debouncer(milliseconds: 500); // Wait 500ms after typing stops
-  
+  final _debouncer = Debouncer(milliseconds: 500);
+
   List<Product> _searchResults = [];
   bool _isSearching = false;
   String _lastQuery = '';
@@ -38,27 +40,23 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
       return;
     }
 
-    // Prevent duplicate searches
     if (query == _lastQuery) return;
     _lastQuery = query;
 
     setState(() => _isSearching = true);
 
     try {
-      // Check if input is a barcode (all digits, 10-13 characters)
       final isBarcodeSearch = RegExp(r'^\d{10,13}$').hasMatch(query.trim());
 
       List<Map<String, dynamic>> results;
 
       if (isBarcodeSearch) {
-        // EXACT BARCODE MATCH (Instant)
         results = await _supabase
             .from('products')
             .select()
             .eq('barcode', query.trim())
             .limit(50);
       } else {
-        // TOKEN-BASED TEXT SEARCH
         results = await _tokenBasedSearch(query);
       }
 
@@ -78,7 +76,6 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
 
   /// Optimized token-based search using PostgreSQL's ILIKE and OR conditions
   Future<List<Map<String, dynamic>>> _tokenBasedSearch(String query) async {
-    // Split query into tokens (words)
     final tokens = query
         .toLowerCase()
         .split(' ')
@@ -87,10 +84,6 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
 
     if (tokens.isEmpty) return [];
 
-    // Build SQL query: product_name ILIKE '%token1%' AND product_name ILIKE '%token2%'
-    // OR brand ILIKE '%token%' OR barcode = 'query'
-    
-    // For PostgreSQL, we'll use multiple OR conditions for flexible matching
     final searchConditions = tokens.map((token) {
       return 'product_name.ilike.%$token%,brand.ilike.%$token%,category.ilike.%$token%';
     }).join(',');
@@ -100,22 +93,18 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
           .from('products')
           .select()
           .or(searchConditions)
-          .gt('current_stock', 0) // Only show in-stock items
+          .gt('current_stock', 0)
           .order('product_name', ascending: true)
           .limit(50);
 
-      // Filter results in-memory to ensure ALL tokens are present
       return results.where((product) {
         final productName = (product['product_name'] ?? '').toString().toLowerCase();
         final brand = (product['brand'] ?? '').toString().toLowerCase();
         final category = (product['category'] ?? '').toString().toLowerCase();
         final searchableText = '$productName $brand $category';
-
-        // Check if ALL tokens are present
         return tokens.every((token) => searchableText.contains(token));
       }).toList();
     } catch (e) {
-      print('Search error: $e');
       return [];
     }
   }
@@ -123,73 +112,58 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9F9F9),
       appBar: AppBar(
-        title: const Text('Search Products'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Search by name, brand, or barcode...',
-                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF00A82D)),
-                
-                // BARCODE SCANNER BUTTON
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_searchController.text.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear, size: 20),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchResults = [];
-                            _lastQuery = '';
-                          });
-                        },
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF00A82D)),
-                      tooltip: 'Scan Barcode',
-                      onPressed: () {
-                        // TODO: Integrate barcode scanner package
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Barcode scanner coming soon!\nFor now, type barcode numbers.'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF00A82D), width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              onChanged: (value) {
-                // Debounce: Wait 500ms after user stops typing before searching
-                _debouncer.run(() => _performSearch(value));
-              },
-            ),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF3D3D3D),
+        elevation: 0,
+        titleSpacing: 0,
+        title: TextField(
+          controller: _searchController,
+          autofocus: true,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: const Color(0xFF3D3D3D),
           ),
+          decoration: InputDecoration(
+            hintText: 'Search products, brands, barcodes...',
+            hintStyle: GoogleFonts.poppins(
+              color: const Color(0xFF737373),
+              fontSize: 14,
+            ),
+            border: InputBorder.none,
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20, color: Color(0xFF737373)),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {
+                        _searchResults = [];
+                        _lastQuery = '';
+                      });
+                    },
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF0C831F)),
+                    tooltip: 'Scan Barcode',
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Barcode scanner coming soon! For now, type barcode numbers.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          onChanged: (value) {
+            setState(() {}); // Rebuild to show/hide clear button
+            _debouncer.run(() => _performSearch(value));
+          },
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: Color(0xFFEEEEEE)),
         ),
       ),
       body: _buildBody(),
@@ -198,7 +172,9 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
 
   Widget _buildBody() {
     if (_isSearching) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0C831F)),
+      );
     }
 
     if (_searchController.text.isEmpty) {
@@ -206,16 +182,23 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search, size: 80, color: Colors.grey[300]),
+            Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey[300]),
             const SizedBox(height: 16),
             Text(
               'Search for products',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                color: const Color(0xFF3D3D3D),
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Try "Maggi", "Colgate", or scan barcode',
-              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFF737373),
+              ),
             ),
           ],
         ),
@@ -227,16 +210,23 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 80, color: Colors.grey[300]),
+            Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey[300]),
             const SizedBox(height: 16),
             Text(
-              'No products found',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+              'No results found',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                color: const Color(0xFF3D3D3D),
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Try different keywords',
-              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+              'Try a different search term',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFF737373),
+              ),
             ),
           ],
         ),
@@ -247,43 +237,219 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Text(
-            '${_searchResults.length} result${_searchResults.length != 1 ? 's' : ''} found',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF666666),
+            '${_searchResults.length} result${_searchResults.length != 1 ? 's' : ''} for "${_searchController.text}"',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: const Color(0xFF737373),
             ),
           ),
         ),
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 0.72,
+              childAspectRatio: 0.68,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
             itemCount: _searchResults.length,
             itemBuilder: (context, index) {
-              return EnhancedProductCard(
-                product: _searchResults[index],
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    SlidePageRoute(
-                      page: ProductDetailScreen(product: _searchResults[index]),
-                      direction: PageTransitionDirection.right,
-                    ),
-                  );
-                },
-              );
+              return _buildProductCard(context, _searchResults[index]);
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProductCard(BuildContext context, Product product) {
+    return Consumer<CartProvider>(
+      builder: (context, cart, _) {
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              SlidePageRoute(
+                page: ProductDetailScreen(product: product),
+                direction: PageTransitionDirection.right,
+              ),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x261C1C1C),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image Area
+                Container(
+                  height: 130,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: product.imageUrl!,
+                          fit: BoxFit.contain,
+                          placeholder: (_, __) => const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0C831F)),
+                          ),
+                          errorWidget: (_, __, ___) => Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 40,
+                            color: Colors.grey[400],
+                          ),
+                        )
+                      : Icon(
+                          Icons.shopping_bag_outlined,
+                          size: 40,
+                          color: Colors.grey[400],
+                        ),
+                ),
+
+                // Content Area
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.weightPackSize ?? '1 unit',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF737373),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF3D3D3D),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '₹${product.price.toStringAsFixed(0)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF3D3D3D),
+                                ),
+                              ),
+                              if (product.mrp != null && product.mrp! > product.price)
+                                Text(
+                                  '₹${product.mrp!.toStringAsFixed(0)}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: const Color(0xFF9E9E9E),
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          _buildAddButton(product, cart),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAddButton(Product product, CartProvider cart) {
+    final qty = cart.getQuantity(product.id);
+
+    if (qty == 0) {
+      return GestureDetector(
+        onTap: () => cart.addToCart(product),
+        child: Container(
+          height: 36,
+          width: 88,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF7FFF9),
+            border: Border.all(color: const Color(0xFF0C831F), width: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Text(
+              'ADD',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF0C831F),
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 36,
+      width: 88,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0C831F),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          GestureDetector(
+            onTap: () {
+              if (qty > 1) {
+                cart.updateQuantity(product.id, qty - 1);
+              } else {
+                cart.removeFromCart(product.id);
+              }
+            },
+            child: const Icon(Icons.remove, color: Colors.white, size: 16),
+          ),
+          Text(
+            '$qty',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          GestureDetector(
+            onTap: () => cart.addToCart(product),
+            child: const Icon(Icons.add, color: Colors.white, size: 16),
+          ),
+        ],
+      ),
     );
   }
 }
