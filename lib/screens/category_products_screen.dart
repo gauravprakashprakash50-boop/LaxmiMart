@@ -343,7 +343,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF3D3D3D),
+                              color: const Color(0xFF0C831F),
                             ),
                           ),
                           if (product.mrp != null && product.mrp! > product.price)

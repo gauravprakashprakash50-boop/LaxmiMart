@@ -62,7 +62,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           .select()
           .single();
 
-      final int customerId = customerResponse['id'] as int;
+      final String customerId = customerResponse['id'] as String;
       debugPrint("Customer ID: $customerId");
 
       // 3. Insert Order
