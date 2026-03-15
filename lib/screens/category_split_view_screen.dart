@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../main.dart';
@@ -136,12 +135,12 @@ class _CategorySplitViewScreenState extends State<CategorySplitViewScreen> {
                       height: 56,
                       decoration: BoxDecoration(
                         color: isSelected 
-                          ? const Color(0xFF00A82D).withOpacity(0.1)
+                          ? const Color(0xFF00A82D).withValues(alpha: 0.1)
                           : Colors.white,
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: isSelected ? [
                           BoxShadow(
-                            color: const Color(0xFF00A82D).withOpacity(0.2),
+                            color: const Color(0xFF00A82D).withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),

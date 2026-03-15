@@ -30,8 +30,10 @@ class ConnectivityProvider with ChangeNotifier {
   }
 
   void _updateConnectionStatus(ConnectivityResult result) {
+    final wasConnected = _isConnected;
     _isConnected = result != ConnectivityResult.none;
-    notifyListeners();
+    // Only rebuild listeners when status actually changes
+    if (wasConnected != _isConnected) notifyListeners();
   }
 
   Future<bool> waitForConnection(

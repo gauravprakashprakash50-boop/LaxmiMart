@@ -1,4 +1,5 @@
 import '../main.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CategoryHelper {
@@ -32,7 +33,7 @@ class CategoryHelper {
 
       return sortedCategories;
     } catch (e) {
-      print('Error fetching categories: $e');
+      if (kDebugMode) debugPrint('Error fetching categories: $e');
       return [];
     }
   }
@@ -49,7 +50,7 @@ class CategoryHelper {
 
       return response.map((e) => Product.fromMap(e)).toList();
     } catch (e) {
-      print('Error fetching products for category $category: $e');
+      if (kDebugMode) debugPrint('Error fetching products for category $category: $e');
       return [];
     }
   }

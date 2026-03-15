@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../main.dart';
 import '../routes/page_transitions.dart';
 import '../widgets/skeleton_loader.dart';
+import '../utils/variant_grouper.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
   final Category category;
@@ -20,6 +21,9 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   final _scrollController = ScrollController();
 
   List<Product> _products = [];
+  List<GroupedProduct> _grouped = [];
+  // Tracks which variant index is selected per grouped-product base name
+  final Map<String, int> _selectedVariants = {};
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -58,6 +62,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
       setState(() {
         _products = (response as List).map((e) => Product.fromMap(e)).toList();
+        _grouped = VariantGrouper.groupProducts(_products);
         _hasMore = _products.length == _pageSize;
         _isLoading = false;
       });
@@ -89,6 +94,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
       setState(() {
         _products.addAll(newProducts);
+        _grouped = VariantGrouper.groupProducts(_products);
         _hasMore = newProducts.length == _pageSize;
         _isLoadingMore = false;
       });
@@ -120,7 +126,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             ),
             if (!_isLoading)
               Text(
-                '${_products.length} products',
+                '${_grouped.length} product${_grouped.length == 1 ? '' : 's'}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
                   color: const Color(0xFF737373),
@@ -147,7 +153,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   itemCount: 6,
                   itemBuilder: (_, __) => SkeletonLoader.productCard(),
                 )
-              : _products.isEmpty
+               : _grouped.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -169,16 +175,16 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.62,
+                        childAspectRatio: 0.58,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
                       ),
-                      itemCount: _products.length + (_isLoadingMore ? 2 : 0),
+                      itemCount: _grouped.length + (_isLoadingMore ? 2 : 0),
                       itemBuilder: (context, index) {
-                        if (index >= _products.length) {
+                        if (index >= _grouped.length) {
                           return SkeletonLoader.productCard();
                         }
-                        return _buildProductCard(context, _products[index], cart);
+                        return _buildGroupedCard(context, _grouped[index]);
                       },
                     ),
 
@@ -247,137 +253,170 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     );
   }
 
-  Widget _buildProductCard(BuildContext context, Product product, CartProvider cart) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        SlidePageRoute(
-          page: ProductDetailScreen(product: product),
-          direction: PageTransitionDirection.right,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x261C1C1C),
-              blurRadius: 4,
-              offset: Offset(0, 1),
+  Widget _buildGroupedCard(BuildContext context, GroupedProduct group) {
+    final selectedIdx = _selectedVariants[group.baseName] ?? 0;
+    final variant = group.variants[selectedIdx];
+    final hasVariants = group.variants.length > 1;
+
+    // Find the full Product for the selected variant so we can navigate & add to cart
+    final product = _products.firstWhere(
+      (p) => p.id == variant.id,
+      orElse: () => _products.first,
+    );
+
+    return Consumer<CartProvider>(
+      builder: (context, cart, _) {
+
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            SlidePageRoute(
+              page: ProductDetailScreen(product: product),
+              direction: PageTransitionDirection.right,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image Area
-            Container(
-              height: 130,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: product.imageUrl!,
-                      fit: BoxFit.contain,
-                      placeholder: (_, __) => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0C831F)),
-                      ),
-                      errorWidget: (_, __, ___) => Icon(
-                        Icons.shopping_bag_outlined,
-                        size: 40,
-                        color: Colors.grey[400],
-                      ),
-                    )
-                  : Icon(
-                      Icons.shopping_bag_outlined,
-                      size: 40,
-                      color: Colors.grey[400],
-                    ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
+              boxShadow: const [
+                BoxShadow(color: Color(0x261C1C1C), blurRadius: 4, offset: Offset(0, 1)),
+              ],
             ),
-
-            // Content Area
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Weight/unit tag
-                  Text(
-                    product.weightPackSize ?? '1 unit',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: const Color(0xFF737373),
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image
+                Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                   ),
-                  const SizedBox(height: 4),
-
-                  // Product name
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF3D3D3D),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Price row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '₹${product.price.toStringAsFixed(0)}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0C831F),
-                            ),
+                  padding: const EdgeInsets.all(14),
+                  child: group.imageUrl != null && group.imageUrl!.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: group.imageUrl!,
+                          fit: BoxFit.contain,
+                          placeholder: (_, __) => const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0C831F)),
                           ),
-                          if (product.mrp != null && product.mrp! > product.price)
-                            Text(
-                              '₹${product.mrp!.toStringAsFixed(0)}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: const Color(0xFF9E9E9E),
-                                decoration: TextDecoration.lineThrough,
+                          errorWidget: (_, __, ___) =>
+                              Icon(Icons.shopping_bag_outlined, size: 36, color: Colors.grey[400]),
+                        )
+                      : Icon(Icons.shopping_bag_outlined, size: 36, color: Colors.grey[400]),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Base name
+                      Text(
+                        group.baseName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF3D3D3D),
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Size chips (only shown if multiple variants)
+                      if (hasVariants)
+                        SizedBox(
+                          height: 26,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: group.variants.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 4),
+                            itemBuilder: (_, i) {
+                              final v = group.variants[i];
+                              final isSelected = i == selectedIdx;
+                              return GestureDetector(
+                                onTap: () => setState(
+                                  () => _selectedVariants[group.baseName] = i,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFF0C831F)
+                                        : const Color(0xFFF0F0F0),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    v.size,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected ? Colors.white : const Color(0xFF616161),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                      const SizedBox(height: 6),
+
+                      // Price + ADD button row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '₹${variant.price.toStringAsFixed(0)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0C831F),
+                                ),
                               ),
-                            ),
+                              if (variant.mrp != null && variant.mrp! > variant.price)
+                                Text(
+                                  '₹${variant.mrp!.toStringAsFixed(0)}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: const Color(0xFF9E9E9E),
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          _buildAddButton(variant.id, variant.stock, cart, product),
                         ],
                       ),
-                      _buildAddButton(product, cart),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildAddButton(Product product, CartProvider cart) {
-    final qty = cart.getQuantity(product.id);
+  Widget _buildAddButton(int productId, int stock, CartProvider cart, Product product) {
+    final qty = cart.getQuantity(productId);
 
     if (qty == 0) {
       return GestureDetector(
         onTap: () => cart.addToCart(product),
         child: Container(
-          height: 36,
-          width: 88,
+          height: 32,
+          width: 76,
           decoration: BoxDecoration(
             color: const Color(0xFFF7FFF9),
             border: Border.all(color: const Color(0xFF0C831F), width: 0.5),
@@ -389,7 +428,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
               style: GoogleFonts.poppins(
                 color: const Color(0xFF0C831F),
                 fontWeight: FontWeight.w700,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ),
@@ -398,8 +437,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     }
 
     return Container(
-      height: 36,
-      width: 88,
+      height: 32,
+      width: 76,
       decoration: BoxDecoration(
         color: const Color(0xFF0C831F),
         borderRadius: BorderRadius.circular(8),
@@ -410,24 +449,24 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           GestureDetector(
             onTap: () {
               if (qty > 1) {
-                cart.updateQuantity(product.id, qty - 1);
+                cart.updateQuantity(productId, qty - 1);
               } else {
-                cart.removeFromCart(product.id);
+                cart.removeFromCart(productId);
               }
             },
-            child: const Icon(Icons.remove, color: Colors.white, size: 16),
+            child: const Icon(Icons.remove, color: Colors.white, size: 14),
           ),
           Text(
             '$qty',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontWeight: FontWeight.w700,
-              fontSize: 14,
+              fontSize: 13,
             ),
           ),
           GestureDetector(
-            onTap: () => cart.addToCart(product),
-            child: const Icon(Icons.add, color: Colors.white, size: 16),
+            onTap: qty < stock ? () => cart.addToCart(product) : null,
+            child: const Icon(Icons.add, color: Colors.white, size: 14),
           ),
         ],
       ),
